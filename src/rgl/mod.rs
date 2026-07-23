@@ -13,7 +13,7 @@ pub enum AppError {
 
 pub struct App<'a, T, U, W, S> {
     glfw: Glfw,
-    window: Window<'a, U, S>,
+    window: Window<'a, U>,
     render: T,
     update: W,
     clear_color: [f32; 4],
@@ -45,7 +45,7 @@ where
         }
         let mut glfw = res?;
 
-        let res: Result<Window<'a, U, S>, WindowError> = Window::new(&mut glfw, width, height, title, event_handler);
+        let res: Result<Window<'a, U>, WindowError> = Window::new(&mut glfw, width, height, title, event_handler);
         if res.is_err() {
             return Err(AppError::WindowError(res.err().unwrap()))
         }
