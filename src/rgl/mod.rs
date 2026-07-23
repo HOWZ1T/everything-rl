@@ -14,6 +14,8 @@ pub enum AppError {
 pub trait AppCallbacks {
     type State;
 
+    // called once after the GL context has been created and function pointers loaded.
+    fn init(&mut self) -> Self::State;
     fn render(&mut self, state: &mut Self::State);
     fn event(&mut self, window: &mut glfw::Window, event: WindowEvent, state: &mut Self::State);
     fn update(&mut self, state: &mut Self::State, delta_ms: f64);
@@ -40,7 +42,7 @@ impl<'a, C: AppCallbacks> App<'a, C> {
         Ok(glfw)
     }
 
-    pub fn new(width: u32, height: u32, title: &'a str, state: C::State, callbacks: C) -> Result<App<'a, C>, AppError> {
+    pub fn new(width: u32, height: u32, title: &'a str, mut callbacks: C) -> Result<App<'a, C>, AppError> {
         let res = Self::init();
         if res.is_err() {
             return Err(res.err().unwrap())
@@ -51,6 +53,10 @@ impl<'a, C: AppCallbacks> App<'a, C> {
         if res.is_err() {
             return Err(AppError::WindowError(res.err().unwrap()))
         }
+
+        // GL context is live and function pointers are loaded past this point,
+        // so it's safe for callbacks to create GL objects here.
+        let state = callbacks.init();
 
         Ok(
             App {
