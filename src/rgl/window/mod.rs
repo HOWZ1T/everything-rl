@@ -1,22 +1,19 @@
 pub mod err;
 
 use glfw::{WindowEvent, Glfw, GlfwReceiver, Context};
-use glfw::ffi::{glfwSetFramebufferSizeCallback, GLFWwindow};
 use crate::rgl::utils::gl_get_string;
 use crate::rgl::window::err::WindowError;
 
-pub struct Window<'a, T> {
+pub struct Window<'a> {
     width: u32,
     height: u32,
     title: &'a str,
     window: glfw::PWindow,
     window_receiver: GlfwReceiver<(f64, WindowEvent)>,
-    event_handler: T
 }
 
-impl<'a, T> Window<'a, T>
-{
-    pub fn new(glfw: &mut Glfw, width: u32, height: u32, title: &'a str, event_handler: T) -> Result<Window<'a, T>, WindowError> {
+impl<'a> Window<'a> {
+    pub fn new(glfw: &mut Glfw, width: u32, height: u32, title: &'a str) -> Result<Window<'a>, WindowError> {
         let win_opt = glfw.create_window(width, height, title, glfw::WindowMode::Windowed);
         let Some((mut win, win_receiver)) = win_opt else {
             return Err(WindowError::FailedToCreateWindow);
@@ -59,7 +56,6 @@ impl<'a, T> Window<'a, T>
                 title,
                 window: win,
                 window_receiver: win_receiver,
-                event_handler
             }
         )
     }
@@ -68,13 +64,13 @@ impl<'a, T> Window<'a, T>
         self.window.should_close()
     }
 
-    pub fn poll_events<S>(&mut self, glfw: &mut Glfw, state: &mut S)
+    pub fn poll_events<F>(&mut self, glfw: &mut Glfw, mut event_handler: F)
     where
-        T: FnMut(&mut glfw::Window, WindowEvent, &mut S)
+        F: FnMut(&mut glfw::Window, WindowEvent)
     {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&self.window_receiver) {
-            (self.event_handler)(&mut *self.window, event, state);
+            event_handler(&mut *self.window, event);
         }
     }
 
