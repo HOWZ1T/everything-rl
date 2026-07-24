@@ -4,6 +4,8 @@ use crate::rgl::window::Window;
 
 pub mod window;
 pub mod utils;
+pub mod resource_manager;
+pub mod shaders;
 
 #[derive(Debug)]
 pub enum AppError {

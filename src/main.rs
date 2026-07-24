@@ -4,9 +4,12 @@ use gl::types::{GLsizei, GLsizeiptr, GLuint, GLvoid};
 use glfw;
 use glfw::{WindowEvent};
 use rgl::AppCallbacks;
+use rgl::resource_manager::ResourceManager;
+use rgl::shaders::{Shader, ShaderProgram};
+use crate::rgl::shaders::ShaderType;
 
 struct Triangle {
-    vertices: [f32; 9],
+    vertices: [f32; 18],
     indices: [u32; 3],
     vao: GLuint,
     vbo: GLuint,
@@ -15,10 +18,11 @@ struct Triangle {
 
 impl Triangle {
     pub fn new() -> Self {
-        let vertices: [f32; 9] = [
-            -0.5, -0.5, 0.0,
-            0.5, -0.5, 0.0,
-            0.0,  0.5, 0.0
+        // interleaved: position (x, y, z), color (r, g, b)
+        let vertices: [f32; 18] = [
+            -0.5, -0.5, 0.0,  1.0, 0.0, 0.0,
+            0.5, -0.5, 0.0,  0.0, 1.0, 0.0,
+            0.0,  0.5, 0.0,  0.0, 0.0, 1.0
         ];
         let indices: [u32; 3] = [
             0, 1, 2,
@@ -50,16 +54,27 @@ impl Triangle {
                 gl::STATIC_DRAW,
             );
 
-            // set vertex attribute
+            // set vertex attributes
+            let stride = 6 * size_of::<f32>() as GLsizei;
             gl::VertexAttribPointer(
                 0,
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                3 * size_of::<f32>() as GLsizei,
+                stride,
                 std::ptr::null(),
             );
             gl::EnableVertexAttribArray(0);
+
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                stride,
+                (3 * size_of::<f32>()) as *const GLvoid,
+            );
+            gl::EnableVertexAttribArray(1);
 
             // unbind
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -81,6 +96,8 @@ struct AppState {
     t0: f64,
     t1: f64,
     triangle: Triangle,
+    resource_manager: ResourceManager,
+    shader_program: ShaderProgram
 }
 
 struct MyApp;
@@ -89,14 +106,43 @@ impl AppCallbacks for MyApp {
     type State = AppState;
 
     fn init(&mut self) -> AppState {
-        AppState { counter: 0, t0: 0.0, t1: 0.0, triangle: Triangle::new() }
+        let resource_manager = ResourceManager::new();
+        let Ok(frag_shader) = resource_manager.load_shader_source("resources/shaders/frag.glsl") else {
+            panic!("Can't load frag shader");
+        };
+
+        let Ok(vert_shader) = resource_manager.load_shader_source("resources/shaders/vert.glsl") else {
+            panic!("Can't load vert shader");
+        };
+
+        let frag_shader = Shader::new("default_frag".parse().unwrap(), frag_shader, ShaderType::Fragment);
+        let vert_shader = Shader::new("default_vert".parse().unwrap(), vert_shader, ShaderType::Vertex);
+        let mut shader_program = ShaderProgram::new("default program".parse().unwrap());
+        let res = shader_program.take_shader(frag_shader);
+        if res.is_err() {
+            panic!("Can't attach frag shader to program: {:?}", res.unwrap_err());
+        }
+        let res = shader_program.take_shader(vert_shader);
+        if res.is_err() {
+            panic!("Can't attach frag shader to program: {:?}", res.unwrap_err());
+        }
+        let res = shader_program.compile_and_link();
+        if res.is_err() {
+            panic!("Can't compile shader program: {:?}", res.unwrap_err());
+        }
+
+        AppState {
+            counter: 0, t0: 0.0, t1: 0.0, triangle: Triangle::new(),
+            resource_manager,
+            shader_program,
+        }
     }
 
     fn render(&mut self, state: &mut AppState) {
         unsafe {
-            gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+            gl::UseProgram(state.shader_program.id());
             gl::BindVertexArray(state.triangle.vao);
-            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
         }
     }
 
