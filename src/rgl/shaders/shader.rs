@@ -1,6 +1,6 @@
+use gl::types::{GLchar, GLint, GLuint};
 use std::ffi::CString;
 use std::fmt::{Display, Formatter};
-use gl::types::{GLchar, GLint, GLuint};
 
 #[derive(Debug)]
 pub enum ShaderError {
@@ -10,7 +10,7 @@ pub enum ShaderError {
 pub enum ShaderType {
     Vertex,
     Fragment,
-    Compute
+    Compute,
 }
 
 impl Display for ShaderType {
@@ -29,7 +29,6 @@ pub struct Shader {
     pub typ: ShaderType,
     id: Option<GLuint>,
     has_compiled: bool,
-
 }
 
 impl Shader {
@@ -48,7 +47,7 @@ impl Shader {
         let gl_shader_type = match self.typ {
             ShaderType::Vertex => gl::VERTEX_SHADER,
             ShaderType::Fragment => gl::FRAGMENT_SHADER,
-            ShaderType::Compute => gl::COMPUTE_SHADER
+            ShaderType::Compute => gl::COMPUTE_SHADER,
         };
 
         let shader_id: GLuint;
@@ -66,7 +65,12 @@ impl Shader {
                 let mut info_log = Vec::with_capacity(cap);
                 info_log.set_len(cap);
 
-                gl::GetShaderInfoLog(shader_id, 512, std::ptr::null_mut(), info_log.as_mut_ptr() as *mut GLchar);
+                gl::GetShaderInfoLog(
+                    shader_id,
+                    512,
+                    std::ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
                 err_msg = Some(String::from_utf8_lossy(&info_log).to_string());
             }
         }
@@ -82,5 +86,14 @@ impl Shader {
 
     pub fn id(&self) -> Option<GLuint> {
         self.id
+    }
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteShader(self.id().unwrap());
+        }
+        println!("deleted shader: {}", self.name);
     }
 }

@@ -17,15 +17,16 @@ impl ResourceManager {
             panic!("Can't get current directory");
         };
 
-        ResourceManager {
-            root
-        }
+        ResourceManager { root }
     }
 
     pub fn load_raw_resource(&self, name: &str) -> Result<Vec<u8>, std::io::Error> {
         let path = self.root.join(name);
         if !path.exists() {
-            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Not found"))?
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Not found",
+            ))?
         }
 
         // read data as bytes
@@ -42,7 +43,7 @@ impl ResourceManager {
         let data = res.unwrap();
         let res = String::from_utf8(data);
         if res.is_err() {
-            return Err(ResourceManagerError::Utf8Error(res.err().unwrap()))
+            return Err(ResourceManagerError::Utf8Error(res.err().unwrap()));
         }
         Ok(res.unwrap())
     }

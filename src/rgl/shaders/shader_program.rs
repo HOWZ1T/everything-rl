@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use gl::types::{GLchar, GLint, GLuint};
 use crate::rgl::shaders::shader::{Shader, ShaderError};
 use crate::rgl::shaders::shader_program::ShaderProgramError::ShaderProgramAlreadyLinked;
 use crate::rgl::shaders::uniforms::{Uniform, UniformError};
+use gl::types::{GLchar, GLint, GLuint};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum ShaderProgramError {
-    ShaderAlreadyAttached(String),  // TODO since ShaderProgram owns shaders via take_shader this class of error might not be relevant
+    ShaderAlreadyAttached(String),
     ShaderProgramAlreadyLinked,
     FailedToGetShaderId(String),
     ShaderError(ShaderError),
@@ -28,7 +28,7 @@ impl ShaderProgramCapabilities {
         }
 
         ShaderProgramCapabilities {
-            max_num_vertex_attribs
+            max_num_vertex_attribs,
         }
     }
 
@@ -70,7 +70,9 @@ impl ShaderProgram {
         }
 
         if self.has_shader(&shader) {
-            return Err(ShaderProgramError::ShaderAlreadyAttached(shader.name.clone()));
+            return Err(ShaderProgramError::ShaderAlreadyAttached(
+                shader.name.clone(),
+            ));
         }
 
         self.shaders.insert(shader.name.clone(), shader);
@@ -106,7 +108,12 @@ impl ShaderProgram {
                 let mut info_log = Vec::with_capacity(cap);
                 info_log.set_len(cap);
 
-                gl::GetProgramInfoLog(self.id.unwrap(), 512, std::ptr::null_mut(), info_log.as_mut_ptr() as *mut GLchar);
+                gl::GetProgramInfoLog(
+                    self.id.unwrap(),
+                    512,
+                    std::ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
                 err_msg = Some(String::from_utf8_lossy(&info_log).to_string());
             }
         }
@@ -133,6 +140,7 @@ impl ShaderProgram {
         }
 
         self.link()?;
+        self.shaders.clear();
         Ok(())
     }
 
@@ -157,5 +165,15 @@ impl ShaderProgram {
             return Err(ShaderProgramError::UniformError(res.unwrap_err()));
         }
         Ok(())
+    }
+}
+
+impl Drop for ShaderProgram {
+    fn drop(&mut self) {
+        unsafe {
+            gl::UseProgram(0);
+            gl::DeleteProgram(self.id.unwrap());
+        }
+        println!("deleted shader program: {}", self.name);
     }
 }

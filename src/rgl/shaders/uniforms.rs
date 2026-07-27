@@ -1,11 +1,11 @@
-use std::ffi::CString;
-use gl::types::{GLfloat, GLint, GLuint};
-use crate::rgl::shaders::{ShaderProgram};
+use crate::rgl::shaders::ShaderProgram;
 use crate::rgl::types::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec4};
+use gl::types::{GLfloat, GLint, GLuint};
+use std::ffi::CString;
 
 #[derive(Debug)]
 pub enum UniformError {
-    CouldNotFindUniformLocation(String)
+    CouldNotFindUniformLocation(String),
 }
 
 pub trait Uniform<T> {

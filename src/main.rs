@@ -1,12 +1,12 @@
 pub mod rgl;
 
+use crate::rgl::shaders::ShaderType;
 use gl::types::{GLsizei, GLsizeiptr, GLuint, GLvoid};
 use glfw;
-use glfw::{WindowEvent};
+use glfw::WindowEvent;
 use rgl::AppCallbacks;
 use rgl::resource_manager::ResourceManager;
 use rgl::shaders::{Shader, ShaderProgram};
-use crate::rgl::shaders::ShaderType;
 
 struct Triangle {
     vertices: [f32; 18],
@@ -20,13 +20,10 @@ impl Triangle {
     pub fn new() -> Self {
         // interleaved: position (x, y, z), color (r, g, b)
         let vertices: [f32; 18] = [
-            -0.5, -0.5, 0.0,  1.0, 0.0, 0.0,
-            0.5, -0.5, 0.0,  0.0, 1.0, 0.0,
-            0.0,  0.5, 0.0,  0.0, 0.0, 1.0
+            -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0,
+            1.0,
         ];
-        let indices: [u32; 3] = [
-            0, 1, 2,
-        ];
+        let indices: [u32; 3] = [0, 1, 2];
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -56,14 +53,7 @@ impl Triangle {
 
             // set vertex attributes
             let stride = 6 * size_of::<f32>() as GLsizei;
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                stride,
-                std::ptr::null(),
-            );
+            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
             gl::EnableVertexAttribArray(0);
 
             gl::VertexAttribPointer(
@@ -86,7 +76,7 @@ impl Triangle {
             indices,
             vao,
             vbo,
-            ebo
+            ebo,
         }
     }
 }
@@ -97,7 +87,7 @@ struct AppState {
     t1: f64,
     triangle: Triangle,
     resource_manager: ResourceManager,
-    shader_program: ShaderProgram
+    shader_program: ShaderProgram,
 }
 
 struct MyApp;
@@ -107,24 +97,40 @@ impl AppCallbacks for MyApp {
 
     fn init(&mut self) -> AppState {
         let resource_manager = ResourceManager::new();
-        let Ok(frag_shader) = resource_manager.load_shader_source("resources/shaders/frag.glsl") else {
+        let Ok(frag_shader) = resource_manager.load_shader_source("resources/shaders/frag.glsl")
+        else {
             panic!("Can't load frag shader");
         };
 
-        let Ok(vert_shader) = resource_manager.load_shader_source("resources/shaders/vert.glsl") else {
+        let Ok(vert_shader) = resource_manager.load_shader_source("resources/shaders/vert.glsl")
+        else {
             panic!("Can't load vert shader");
         };
 
-        let frag_shader = Shader::new("default_frag".parse().unwrap(), frag_shader, ShaderType::Fragment);
-        let vert_shader = Shader::new("default_vert".parse().unwrap(), vert_shader, ShaderType::Vertex);
+        let frag_shader = Shader::new(
+            "default_frag".parse().unwrap(),
+            frag_shader,
+            ShaderType::Fragment,
+        );
+        let vert_shader = Shader::new(
+            "default_vert".parse().unwrap(),
+            vert_shader,
+            ShaderType::Vertex,
+        );
         let mut shader_program = ShaderProgram::new("default program".parse().unwrap());
         let res = shader_program.take_shader(frag_shader);
         if res.is_err() {
-            panic!("Can't attach frag shader to program: {:?}", res.unwrap_err());
+            panic!(
+                "Can't attach frag shader to program: {:?}",
+                res.unwrap_err()
+            );
         }
         let res = shader_program.take_shader(vert_shader);
         if res.is_err() {
-            panic!("Can't attach frag shader to program: {:?}", res.unwrap_err());
+            panic!(
+                "Can't attach frag shader to program: {:?}",
+                res.unwrap_err()
+            );
         }
         let res = shader_program.compile_and_link();
         if res.is_err() {
@@ -136,7 +142,10 @@ impl AppCallbacks for MyApp {
         println!("max_num_vertex_attribs: {}", max_num_vertex_attribs);
 
         AppState {
-            counter: 0, t0: 0.0, t1: 0.0, triangle: Triangle::new(),
+            counter: 0,
+            t0: 0.0,
+            t1: 0.0,
+            triangle: Triangle::new(),
             resource_manager,
             shader_program,
         }
@@ -150,9 +159,7 @@ impl AppCallbacks for MyApp {
         }
     }
 
-    fn event(&mut self, window: &mut glfw::Window, event: WindowEvent, state: &mut AppState) {
-
-    }
+    fn event(&mut self, window: &mut glfw::Window, event: WindowEvent, state: &mut AppState) {}
 
     fn update(&mut self, state: &mut AppState, delta_ms: f64) {
         state.t1 += delta_ms;

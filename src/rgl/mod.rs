@@ -1,12 +1,12 @@
-use glfw::{Glfw, WindowEvent};
-use crate::rgl::window::err::WindowError;
 use crate::rgl::window::Window;
+use crate::rgl::window::err::WindowError;
+use glfw::{Glfw, WindowEvent};
 
-pub mod window;
-pub mod utils;
 pub mod resource_manager;
 pub mod shaders;
 pub mod types;
+pub mod utils;
+pub mod window;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -36,40 +36,45 @@ impl<'a, C: AppCallbacks> App<'a, C> {
     fn init() -> Result<Glfw, AppError> {
         let res = glfw::init_no_callbacks();
         if res.is_err() {
-            return Err(AppError::InitError(res.err().unwrap()))
+            return Err(AppError::InitError(res.err().unwrap()));
         }
 
         let mut glfw = res.unwrap();
         glfw.window_hint(glfw::WindowHint::ContextVersion(4, 6));
-        glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+        glfw.window_hint(glfw::WindowHint::OpenGlProfile(
+            glfw::OpenGlProfileHint::Core,
+        ));
         Ok(glfw)
     }
 
-    pub fn new(width: u32, height: u32, title: &'a str, mut callbacks: C) -> Result<App<'a, C>, AppError> {
+    pub fn new(
+        width: u32,
+        height: u32,
+        title: &'a str,
+        mut callbacks: C,
+    ) -> Result<App<'a, C>, AppError> {
         let res = Self::init();
         if res.is_err() {
-            return Err(res.err().unwrap())
+            return Err(res.err().unwrap());
         }
         let mut glfw = res?;
 
         let res: Result<Window<'a>, WindowError> = Window::new(&mut glfw, width, height, title);
         if res.is_err() {
-            return Err(AppError::WindowError(res.err().unwrap()))
+            return Err(AppError::WindowError(res.err().unwrap()));
         }
 
         // GL context is live and function pointers are loaded past this point,
         // so it's safe for callbacks to create GL objects here.
         let state = callbacks.init();
 
-        Ok(
-            App {
-                glfw,
-                window: res.unwrap(),
-                callbacks,
-                clear_color: [0.0, 0.0, 0.0, 1.0],
-                state,
-            }
-        )
+        Ok(App {
+            glfw,
+            window: res.unwrap(),
+            callbacks,
+            clear_color: [0.0, 0.0, 0.0, 1.0],
+            state,
+        })
     }
 
     pub fn set_clear_color(&mut self, color: [f32; 4]) -> &mut Self {
@@ -89,7 +94,13 @@ impl<'a, C: AppCallbacks> App<'a, C> {
         let mut t0 = self.glfw.get_time();
         while !self.window.should_close() {
             {
-                let App { window, glfw, state, callbacks, .. } = &mut self;
+                let App {
+                    window,
+                    glfw,
+                    state,
+                    callbacks,
+                    ..
+                } = &mut self;
                 window.poll_events(glfw, |w, event| callbacks.event(w, event, state));
             }
 
