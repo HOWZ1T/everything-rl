@@ -1,7 +1,8 @@
 pub mod rgl;
 
+use crate::rgl::mesh;
+use crate::rgl::mesh::Mesh;
 use crate::rgl::shaders::ShaderType;
-use gl::types::{GLsizei, GLsizeiptr, GLuint, GLvoid};
 use glfw;
 use glfw::WindowEvent;
 use rgl::AppCallbacks;
@@ -9,11 +10,7 @@ use rgl::resource_manager::ResourceManager;
 use rgl::shaders::{Shader, ShaderProgram};
 
 struct Triangle {
-    vertices: [f32; 18],
-    indices: [u32; 3],
-    vao: GLuint,
-    vbo: GLuint,
-    ebo: GLuint,
+    mesh: Mesh<mesh::Compiled>,
 }
 
 impl Triangle {
@@ -24,59 +21,20 @@ impl Triangle {
             1.0,
         ];
         let indices: [u32; 3] = [0, 1, 2];
-        let mut vao = 0;
-        let mut vbo = 0;
-        let mut ebo = 0;
 
-        unsafe {
-            // generate
-            gl::GenVertexArrays(1, &mut vao);
-            gl::GenBuffers(1, &mut vbo);
-            gl::GenBuffers(1, &mut ebo);
+        let mesh = Mesh::new(Vec::from(vertices), Vec::from(indices), vec![3, 3]);
 
-            // bind
-            gl::BindVertexArray(vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (vertices.len() * size_of::<f32>()) as GLsizeiptr,
-                vertices.as_ptr() as *const GLvoid,
-                gl::STATIC_DRAW,
-            );
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (indices.len() * size_of::<u32>()) as GLsizeiptr,
-                indices.as_ptr() as *const GLvoid,
-                gl::STATIC_DRAW,
-            );
+        if mesh.is_err() {
+            panic!("{:?}", mesh.err());
+        }
 
-            // set vertex attributes
-            let stride = 6 * size_of::<f32>() as GLsizei;
-            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
-            gl::EnableVertexAttribArray(0);
-
-            gl::VertexAttribPointer(
-                1,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                stride,
-                (3 * size_of::<f32>()) as *const GLvoid,
-            );
-            gl::EnableVertexAttribArray(1);
-
-            // unbind
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-            gl::BindVertexArray(0);
+        let compiled_mesh = mesh.unwrap().compile();
+        if compiled_mesh.is_err() {
+            panic!("{:?}", compiled_mesh.err());
         }
 
         Triangle {
-            vertices,
-            indices,
-            vao,
-            vbo,
-            ebo,
+            mesh: compiled_mesh.unwrap(),
         }
     }
 }
@@ -152,9 +110,14 @@ impl AppCallbacks for MyApp {
     }
 
     fn render(&mut self, state: &mut AppState) {
+        let res = state.triangle.mesh.gl.as_ref();
+        if res.is_none() {
+            return;
+        }
+        let gl_handles = res.unwrap();
         unsafe {
             gl::UseProgram(state.shader_program.id());
-            gl::BindVertexArray(state.triangle.vao);
+            gl::BindVertexArray(gl_handles.vao);
             gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
         }
     }

@@ -2,6 +2,7 @@ use crate::rgl::window::Window;
 use crate::rgl::window::err::WindowError;
 use glfw::{Glfw, WindowEvent};
 
+pub mod mesh;
 pub mod resource_manager;
 pub mod shaders;
 pub mod types;
