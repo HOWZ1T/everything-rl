@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use gl::types::{GLchar, GLint, GLuint};
 use crate::rgl::shaders::shader::{Shader, ShaderError};
 use crate::rgl::shaders::shader_program::ShaderProgramError::ShaderProgramAlreadyLinked;
+use crate::rgl::shaders::uniforms::{Uniform, UniformError};
 
 #[derive(Debug)]
 pub enum ShaderProgramError {
@@ -10,6 +11,30 @@ pub enum ShaderProgramError {
     FailedToGetShaderId(String),
     ShaderError(ShaderError),
     LinkError(String),
+    UnsupportedShaderType(String),
+    UniformError(UniformError),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ShaderProgramCapabilities {
+    max_num_vertex_attribs: GLint,
+}
+
+impl ShaderProgramCapabilities {
+    pub fn new() -> ShaderProgramCapabilities {
+        let mut max_num_vertex_attribs: GLint = 0;
+        unsafe {
+            gl::GetIntegerv(gl::MAX_VERTEX_ATTRIBS, &mut max_num_vertex_attribs);
+        }
+
+        ShaderProgramCapabilities {
+            max_num_vertex_attribs
+        }
+    }
+
+    pub fn max_num_vertex_attribs(&self) -> GLint {
+        self.max_num_vertex_attribs
+    }
 }
 
 pub struct ShaderProgram {
@@ -17,6 +42,7 @@ pub struct ShaderProgram {
     id: Option<GLuint>,
     shaders: HashMap<String, Shader>,
     has_linked: bool,
+    capabilities: ShaderProgramCapabilities,
 }
 
 impl ShaderProgram {
@@ -26,6 +52,7 @@ impl ShaderProgram {
             id: None,
             shaders: HashMap::new(),
             has_linked: false,
+            capabilities: ShaderProgramCapabilities::new(),
         }
     }
 
@@ -55,7 +82,6 @@ impl ShaderProgram {
             return Err(ShaderProgramAlreadyLinked);
         }
 
-        // TODO link
         let mut err_msg = None;
         unsafe {
             self.id = Some(gl::CreateProgram());
@@ -109,8 +135,27 @@ impl ShaderProgram {
         self.link()?;
         Ok(())
     }
-    
+
     pub fn id(&self) -> GLuint {
         self.id.expect("Failed to get shader program id via .id()")
+    }
+
+    pub fn get_capabilities(&self) -> ShaderProgramCapabilities {
+        self.capabilities
+    }
+
+    pub fn set_uniform<T>(&self, name: &str, value: T) -> Result<(), ShaderProgramError>
+    where
+        Self: Uniform<T>,
+    {
+        if !self.has_linked {
+            return Err(ShaderProgramAlreadyLinked);
+        }
+
+        let res = Uniform::set_uniform(self, name, value);
+        if res.is_err() {
+            return Err(ShaderProgramError::UniformError(res.unwrap_err()));
+        }
+        Ok(())
     }
 }

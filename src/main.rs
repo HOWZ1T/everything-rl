@@ -131,6 +131,10 @@ impl AppCallbacks for MyApp {
             panic!("Can't compile shader program: {:?}", res.unwrap_err());
         }
 
+        let capabilities = shader_program.get_capabilities();
+        let max_num_vertex_attribs = capabilities.max_num_vertex_attribs();
+        println!("max_num_vertex_attribs: {}", max_num_vertex_attribs);
+
         AppState {
             counter: 0, t0: 0.0, t1: 0.0, triangle: Triangle::new(),
             resource_manager,

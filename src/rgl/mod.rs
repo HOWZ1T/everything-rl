@@ -6,6 +6,7 @@ pub mod window;
 pub mod utils;
 pub mod resource_manager;
 pub mod shaders;
+pub mod types;
 
 #[derive(Debug)]
 pub enum AppError {

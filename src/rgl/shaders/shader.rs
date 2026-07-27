@@ -1,4 +1,5 @@
 use std::ffi::CString;
+use std::fmt::{Display, Formatter};
 use gl::types::{GLchar, GLint, GLuint};
 
 #[derive(Debug)]
@@ -10,6 +11,16 @@ pub enum ShaderType {
     Vertex,
     Fragment,
     Compute
+}
+
+impl Display for ShaderType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShaderType::Vertex => f.write_str("Vertex"),
+            ShaderType::Fragment => f.write_str("Fragment"),
+            ShaderType::Compute => f.write_str("Compute"),
+        }
+    }
 }
 
 pub struct Shader {
